@@ -7,8 +7,6 @@ pipeline {
         CONTAINER     = 'proxy-manager'
         IMAGE_TAG     = "${REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}"
         IMAGE_LATEST  = "${REGISTRY}/${IMAGE_NAME}:latest"
-        // mihomo 内核下载代理（网络不稳定时启用，留空则直连）
-        BUILD_PROXY   = ''
     }
 
     stages {
@@ -21,13 +19,9 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh """docker build \
-                        -t ${IMAGE_NAME} \
-                        -t ${IMAGE_TAG} \
-                        -t ${IMAGE_LATEST} \
-                        --build-arg HTTP_PROXY=${BUILD_PROXY} \
-                        --build-arg HTTPS_PROXY=${BUILD_PROXY} \
-                        ."""
+                // 如需通过代理下载 mihomo 内核，改为:
+                // sh "docker build --build-arg HTTP_PROXY=http://192.168.188.1:7897 -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
+                sh "docker build -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
             }
         }
 
