@@ -1,0 +1,36 @@
+host: "0.0.0.0"
+port: 8000
+jwt_expire_minutes: 1440
+
+# mihomo 内核配置
+mihomo:
+  # mihomo 二进制路径（容器内 /usr/local/bin/mihomo；本地开发请自行下载并配置 PATH 或填写绝对路径）
+  binary: "mihomo"
+  # mihomo 工作目录（存放 config.yaml、订阅缓存等）
+  work_dir: "data/mihomo"
+  # 外部控制端口（仅容器内部通信，用于后端调用 mihomo API）
+  api_port: 9090
+  # 混合代理端口（对外暴露给客户端使用，同时支持 HTTP/SOCKS5）
+  mixed_port: 7890
+  # 是否允许局域网连接
+  allow_lan: true
+  # 日志级别: debug / info / warning / error / silent
+  log_level: "info"
+  # mihomo API secret（留空则启动时自动生成并持久化到 data/settings.json）
+  secret: ""
+  # 是否启用 TUN 模式（需要 NET_ADMIN 权限，Docker 部署建议关闭，客户端用代理端口即可）
+  enable_tun: false
+
+# 流量监控配置
+traffic:
+  # 后端轮询 mihomo /traffic 的间隔（秒）
+  poll_interval: 2
+  # 配额检查间隔（秒）
+  quota_check_interval: 5
+  # 连接信息清理间隔（秒），用于清理已断开连接的历史统计
+  cleanup_interval: 60
+
+# 默认管理员（仅首次启动、数据库无管理员时自动创建）
+default_admin:
+  username: "admin"
+  password: "admin123"

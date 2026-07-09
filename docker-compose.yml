@@ -1,0 +1,17 @@
+services:
+  proxy-manager:
+    image: 192.168.188.18:5000/proxy-manager:${IMAGE_TAG:-latest}
+    container_name: proxy-manager
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # Web 管理界面
+      - "7890:7890"   # 代理混合端口（同时支持 HTTP / SOCKS5）
+    volumes:
+      - proxy-manager-data:/app/backend/data
+    environment:
+      - TZ=Asia/Shanghai
+      - PROXY_MANAGER_HOST=0.0.0.0
+      - PROXY_MANAGER_PORT=8000
+
+volumes:
+  proxy-manager-data:

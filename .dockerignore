@@ -1,0 +1,12 @@
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/dist
+**/.git
+**/*.log
+**/data
+backend/data/*
+!backend/data/.gitkeep
+.gitignore
+README.md
+更新日志.md
