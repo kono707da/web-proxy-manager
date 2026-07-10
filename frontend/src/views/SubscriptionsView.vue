@@ -31,6 +31,7 @@ import {
   Pencil,
   Trash2,
   RotateCw,
+  Globe,
   Inbox
 } from 'lucide-vue-next'
 import { formatDateTime } from '@/lib/format'
@@ -52,8 +53,8 @@ const dialogVisible = ref(false)
 const editing = ref(null)
 const updatingId = ref(null) // 当前正在立即更新的订阅 id
 const updatingAll = ref(false) // 是否正在批量更新
-const useProxyUpdate = ref(false) // 更新时是否通过当前选中节点代理
-const customProxyUrl = ref('') // 自定义代理 URL（用于订阅更新）
+const proxyUpdatingId = ref(null) // 当前正在通过代理更新的订阅 id
+const proxyUpdatingAll = ref(false) // 是否正在批量代理更新
 
 const form = reactive({
   name: '',
@@ -142,13 +143,12 @@ async function onDelete(row) {
   }
 }
 
-// 立即更新单个订阅
+// 立即更新单个订阅（直连）
 async function onUpdateNow(row) {
   updatingId.value = row.id
   try {
-    const proxy = customProxyUrl.value.trim()
-    await updateSubscriptionNow(row.id, useProxyUpdate.value, proxy)
-    toast.success(`订阅「${row.name}」更新成功${useProxyUpdate.value || proxy ? '（代理）' : ''}`)
+    await updateSubscriptionNow(row.id)
+    toast.success(`订阅「${row.name}」更新成功`)
     await loadList()
   } catch (e) {
     toast.error(`订阅「${row.name}」更新失败`, e.response?.data?.detail || e.message)
@@ -157,18 +157,45 @@ async function onUpdateNow(row) {
   }
 }
 
-// 更新全部订阅
+// 通过代理更新单个订阅（需先在设备管理添加本机并分配节点，再开启系统代理）
+async function onUpdateNowWithProxy(row) {
+  proxyUpdatingId.value = row.id
+  try {
+    await updateSubscriptionNow(row.id, true)
+    toast.success(`订阅「${row.name}」通过代理更新成功`)
+    await loadList()
+  } catch (e) {
+    toast.error(`订阅「${row.name}」代理更新失败`, e.response?.data?.detail || e.message)
+  } finally {
+    proxyUpdatingId.value = null
+  }
+}
+
+// 更新全部订阅（直连）
 async function onUpdateAll() {
   updatingAll.value = true
   try {
-    const proxy = customProxyUrl.value.trim()
-    await updateAllSubscriptions(useProxyUpdate.value, proxy)
-    toast.success(`全部订阅更新完成${useProxyUpdate.value || proxy ? '（代理）' : ''}`)
+    await updateAllSubscriptions()
+    toast.success('全部订阅更新完成')
     await loadList()
   } catch (e) {
     toast.error('批量更新订阅失败', e.response?.data?.detail || e.message)
   } finally {
     updatingAll.value = false
+  }
+}
+
+// 通过代理更新全部订阅
+async function onUpdateAllWithProxy() {
+  proxyUpdatingAll.value = true
+  try {
+    await updateAllSubscriptions(true)
+    toast.success('全部订阅通过代理更新完成')
+    await loadList()
+  } catch (e) {
+    toast.error('批量代理更新失败', e.response?.data?.detail || e.message)
+  } finally {
+    proxyUpdatingAll.value = false
   }
 }
 
@@ -205,38 +232,26 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-bold tracking-tight">订阅管理</h2>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 rounded-md border border-border px-3 py-1.5">
-          <Switch
-            id="use-proxy-update"
-            :checked="useProxyUpdate"
-            @update:checked="(v) => (useProxyUpdate = v)"
-          />
-          <Label for="use-proxy-update" class="cursor-pointer text-sm">
-            走内核代理
-          </Label>
-        </div>
-        <Input
-          v-model="customProxyUrl"
-          placeholder="自定义代理 http://ip:port"
-          class="w-52 h-8 text-sm"
-        />
-        <div class="flex gap-2">
-          <Button variant="secondary" :disabled="loading" @click="loadList">
-            <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
-            <RefreshCw v-else class="h-4 w-4" />
-            刷新
-          </Button>
-          <Button variant="secondary" :disabled="updatingAll" @click="onUpdateAll">
-            <Loader2 v-if="updatingAll" class="h-4 w-4 animate-spin" />
-            <RotateCw v-else class="h-4 w-4" />
-            更新全部
-          </Button>
-          <Button @click="openCreate">
-            <Plus class="h-4 w-4" />
-            新增订阅
-          </Button>
-        </div>
+      <div class="flex items-center gap-2">
+        <Button variant="secondary" :disabled="loading" @click="loadList">
+          <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
+          <RefreshCw v-else class="h-4 w-4" />
+          刷新
+        </Button>
+        <Button variant="secondary" :disabled="updatingAll" @click="onUpdateAll">
+          <Loader2 v-if="updatingAll" class="h-4 w-4 animate-spin" />
+          <RotateCw v-else class="h-4 w-4" />
+          更新全部
+        </Button>
+        <Button variant="secondary" :disabled="proxyUpdatingAll" @click="onUpdateAllWithProxy">
+          <Loader2 v-if="proxyUpdatingAll" class="h-4 w-4 animate-spin" />
+          <Globe v-else class="h-4 w-4" />
+          使用代理更新全部
+        </Button>
+        <Button @click="openCreate">
+          <Plus class="h-4 w-4" />
+          新增订阅
+        </Button>
       </div>
     </div>
 
@@ -254,7 +269,7 @@ onMounted(() => {
                 <TableHead class="w-20">启用</TableHead>
                 <TableHead class="min-w-[160px]">最后更新</TableHead>
                 <TableHead class="w-20">状态</TableHead>
-                <TableHead class="w-52 text-right">操作</TableHead>
+                <TableHead class="w-64 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -298,12 +313,22 @@ onMounted(() => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      :disabled="updatingId === row.id"
+                      :disabled="updatingId === row.id || proxyUpdatingId === row.id"
                       @click="onUpdateNow(row)"
                     >
                       <Loader2 v-if="updatingId === row.id" class="h-3.5 w-3.5 animate-spin" />
                       <RotateCw v-else class="h-3.5 w-3.5" />
                       更新
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      :disabled="updatingId === row.id || proxyUpdatingId === row.id"
+                      @click="onUpdateNowWithProxy(row)"
+                    >
+                      <Loader2 v-if="proxyUpdatingId === row.id" class="h-3.5 w-3.5 animate-spin" />
+                      <Globe v-else class="h-3.5 w-3.5" />
+                      代理更新
                     </Button>
                     <Button
                       variant="ghost"

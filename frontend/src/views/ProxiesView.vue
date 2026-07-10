@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,14 +25,6 @@ const delayMap = reactive({})
 // 节点测速中状态：{ [name]: boolean }
 const testingMap = reactive({})
 const batchTesting = ref(false)
-
-// 当前 PROXY 组生效节点
-const currentProxy = computed(() => {
-  const g = groups.value.find((x) => x.name === 'PROXY')
-  return g?.now || ''
-})
-// 当前生效节点的来源订阅
-const currentSource = computed(() => nodeSource.value[currentProxy.value] || '')
 
 // 检查内核是否运行
 async function loadStatus() {
@@ -154,21 +146,6 @@ onMounted(() => {
     </Alert>
 
     <template v-else>
-      <!-- 当前生效节点提示条 -->
-      <Card v-if="currentProxy" class="border-primary/40 bg-primary/5">
-        <CardContent class="flex items-center gap-3 py-4">
-          <Zap class="h-5 w-5 text-primary" />
-          <div class="flex flex-col">
-            <span class="text-xs text-muted-foreground">当前生效节点</span>
-            <span class="text-lg font-bold text-primary">{{ currentProxy }}</span>
-          </div>
-          <div v-if="currentSource" class="ml-4 flex flex-col">
-            <span class="text-xs text-muted-foreground">来源订阅</span>
-            <Badge variant="secondary" class="mt-0.5">{{ currentSource }}</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
       <!-- 分组区域 -->
       <div class="space-y-4">
         <Card v-for="group in groups" :key="group.name">
@@ -233,12 +210,9 @@ onMounted(() => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow v-for="p in proxies" :key="p.name" :class="p.name === currentProxy ? 'bg-primary/5' : ''">
+                <TableRow v-for="p in proxies" :key="p.name">
                   <TableCell class="font-medium">
-                    <div class="flex items-center gap-2">
-                      <Zap v-if="p.name === currentProxy" class="h-3.5 w-3.5 text-primary" />
-                      {{ p.name }}
-                    </div>
+                    {{ p.name }}
                   </TableCell>
                   <TableCell>
                     <Badge v-if="nodeSource[p.name]" variant="secondary">{{ nodeSource[p.name] }}</Badge>

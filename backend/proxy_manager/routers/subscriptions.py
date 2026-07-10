@@ -79,20 +79,19 @@ def delete_subscription(sub_id: int, db: Session = Depends(get_db), _=Depends(re
 def update_subscription_now(
     sub_id: int,
     use_proxy: bool = False,
-    custom_proxy: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ) -> Subscription:
     """立即拉取并更新订阅节点。
 
-    - use_proxy=true: 通过 mihomo 当前选中节点代理拉取（需 mihomo 已运行）
-    - custom_proxy: 直接指定代理 URL（如 http://1.2.3.4:8080），优先级高于 use_proxy
+    - use_proxy=true: 通过 mihomo 的 mixed-port 代理拉取，需先在设备管理中添加本机（127.0.0.1）
+      并分配节点，再开启系统代理指向 mihomo 端口，流量才会经分配的节点代理。
     """
     sub = db.query(Subscription).filter(Subscription.id == sub_id).one_or_none()
     if sub is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"订阅不存在: id={sub_id}")
     try:
-        proxies = config_builder.fetch_subscription(sub.url, use_proxy=use_proxy, custom_proxy=custom_proxy)
+        proxies = config_builder.fetch_subscription(sub.url, use_proxy=use_proxy)
     except Exception as e:
         sub.last_error = str(e)
         sub.last_update = datetime.now(timezone.utc)
@@ -110,27 +109,26 @@ def update_subscription_now(
         get_manager().reload(db)
     except Exception as e:
         logger.warning("订阅更新后 reload 失败（数据已保存）: %s", e)
-    logger.info("订阅 %s 更新成功，节点数=%d (use_proxy=%s, custom_proxy=%s)", sub.name, sub.node_count, use_proxy, custom_proxy or "无")
+    logger.info("订阅 %s 更新成功，节点数=%d (use_proxy=%s)", sub.name, sub.node_count, use_proxy)
     return sub
 
 
 @router.post("/update-all", response_model=MessageResponse)
 def update_all_subscriptions(
     use_proxy: bool = False,
-    custom_proxy: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ) -> MessageResponse:
     """拉取更新所有已启用订阅。
 
-    - use_proxy=true: 通过 mihomo 当前选中节点代理拉取（需 mihomo 已运行）
-    - custom_proxy: 直接指定代理 URL（如 http://1.2.3.4:8080），优先级高于 use_proxy
+    - use_proxy=true: 通过 mihomo 的 mixed-port 代理拉取，需先在设备管理中添加本机（127.0.0.1）
+      并分配节点，再开启系统代理指向 mihomo 端口，流量才会经分配的节点代理。
     """
     subs = db.query(Subscription).filter(Subscription.enabled.is_(True)).all()
     ok, fail = 0, 0
     for sub in subs:
         try:
-            proxies = config_builder.fetch_subscription(sub.url, use_proxy=use_proxy, custom_proxy=custom_proxy)
+            proxies = config_builder.fetch_subscription(sub.url, use_proxy=use_proxy)
             config_builder.save_subscription_cache(sub.id, proxies)
             sub.node_count = len(proxies)
             sub.last_update = datetime.now(timezone.utc)

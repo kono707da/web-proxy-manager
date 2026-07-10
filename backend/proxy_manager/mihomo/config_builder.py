@@ -27,18 +27,15 @@ DEFAULT_RULES: list[str] = [
 ]
 
 
-def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False, custom_proxy: str = "") -> list[dict[str, Any]]:
+def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False) -> list[dict[str, Any]]:
     """拉取订阅链接，解析为 proxies 列表。
 
     支持 clash/mihomo 格式的 yaml，也兼容 base64 编码的节点列表（简单处理）。
-    - use_proxy=True: 通过 mihomo 的 mixed-port（本地 HTTP 代理）拉取，要求 mihomo 已运行。
-    - custom_proxy: 直接指定代理 URL（如 http://1.2.3.4:8080），优先级高于 use_proxy。
+    - use_proxy=True: 通过 mihomo 的 mixed-port（本地 HTTP 代理）拉取，要求 mihomo 已运行，
+      且需在设备管理中为本机（127.0.0.1）分配节点并开启系统代理，流量才会经分配的节点代理。
     """
     proxy_url = None
-    if custom_proxy:
-        proxy_url = custom_proxy
-        logger.info("通过自定义代理 %s 拉取订阅: %s", proxy_url, url)
-    elif use_proxy:
+    if use_proxy:
         from .manager import get_manager
         mgr = get_manager()
         if not mgr.is_running():
