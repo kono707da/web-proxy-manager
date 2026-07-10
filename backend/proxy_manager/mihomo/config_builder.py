@@ -27,21 +27,24 @@ DEFAULT_RULES: list[str] = [
 ]
 
 
-def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False) -> list[dict[str, Any]]:
+def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False, custom_proxy: str = "") -> list[dict[str, Any]]:
     """拉取订阅链接，解析为 proxies 列表。
 
     支持 clash/mihomo 格式的 yaml，也兼容 base64 编码的节点列表（简单处理）。
-    当 use_proxy=True 时，通过 mihomo 的 mixed-port（本地 HTTP 代理）拉取，
-    适用于订阅源需要走代理才能访问的场景。要求 mihomo 已运行。
+    - use_proxy=True: 通过 mihomo 的 mixed-port（本地 HTTP 代理）拉取，要求 mihomo 已运行。
+    - custom_proxy: 直接指定代理 URL（如 http://1.2.3.4:8080），优先级高于 use_proxy。
     """
     proxy_url = None
-    if use_proxy:
+    if custom_proxy:
+        proxy_url = custom_proxy
+        logger.info("通过自定义代理 %s 拉取订阅: %s", proxy_url, url)
+    elif use_proxy:
         from .manager import get_manager
         mgr = get_manager()
         if not mgr.is_running():
             raise RuntimeError("mihomo 未运行，无法使用代理更新订阅，请先在系统设置中启动内核")
         proxy_url = f"http://127.0.0.1:{settings.mihomo.mixed_port}"
-        logger.info("通过代理 %s 拉取订阅: %s", proxy_url, url)
+        logger.info("通过内核代理 %s 拉取订阅: %s", proxy_url, url)
     try:
         with httpx.Client(timeout=timeout, follow_redirects=True, proxy=proxy_url) as client:
             resp = client.get(url, headers={"User-Agent": "clash-verge/v1.0"})

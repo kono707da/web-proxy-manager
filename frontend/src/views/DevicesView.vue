@@ -119,6 +119,15 @@ function openCreate() {
   dialogOpen.value = true
 }
 
+function addLocalhost() {
+  editingId.value = null
+  form.name = '本机'
+  form.source_ip = '127.0.0.1'
+  form.proxy_name = ''
+  form.enabled = true
+  dialogOpen.value = true
+}
+
 function openEdit(row) {
   editingId.value = row.id
   form.name = row.name
@@ -218,6 +227,10 @@ onMounted(() => {
           <Search v-else class="h-4 w-4" />
           扫描客户端
         </Button>
+        <Button size="sm" variant="outline" @click="addLocalhost">
+          <Monitor class="h-4 w-4" />
+          添加本机
+        </Button>
         <Button size="sm" @click="openCreate">
           <Plus class="h-4 w-4" />
           添加设备
@@ -232,6 +245,7 @@ onMounted(() => {
           <Monitor class="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div class="space-y-1 text-muted-foreground">
             <p><span class="text-foreground font-medium">工作原理：</span>根据设备来源 IP 自动路由到分配的节点。国内流量仍走直连，仅代理流量按设备分配。</p>
+            <p><span class="text-foreground font-medium">本机设备：</span>点击「添加本机」可将服务器自身（127.0.0.1）加入设备管理，为本机流量分配固定节点。</p>
             <p><span class="text-foreground font-medium">客户端配置：</span>Windows 设置 → 代理 → 填写 <code class="text-primary">服务器IP:7890</code>；Android WiFi → 代理 → 手动 → 填写 <code class="text-primary">服务器IP:7890</code></p>
             <p><span class="text-foreground font-medium">IP 变化：</span>建议在路由器上为设备做 DHCP 静态绑定。IP 变化后需重新分配。</p>
           </div>

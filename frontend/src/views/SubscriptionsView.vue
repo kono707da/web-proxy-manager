@@ -52,7 +52,9 @@ const dialogVisible = ref(false)
 const editing = ref(null)
 const updatingId = ref(null) // 当前正在立即更新的订阅 id
 const updatingAll = ref(false) // 是否正在批量更新
+const togglingId = ref(null) // 当前正在切换开关的订阅 id
 const useProxyUpdate = ref(false) // 更新时是否通过当前选中节点代理
+const customProxyUrl = ref('') // 自定义代理 URL（用于订阅更新）
 
 const form = reactive({
   name: '',
@@ -145,8 +147,9 @@ async function onDelete(row) {
 async function onUpdateNow(row) {
   updatingId.value = row.id
   try {
-    await updateSubscriptionNow(row.id, useProxyUpdate.value)
-    toast.success(`订阅「${row.name}」更新成功${useProxyUpdate.value ? '（代理）' : ''}`)
+    const proxy = customProxyUrl.value.trim()
+    await updateSubscriptionNow(row.id, useProxyUpdate.value, proxy)
+    toast.success(`订阅「${row.name}」更新成功${useProxyUpdate.value || proxy ? '（代理）' : ''}`)
     await loadList()
   } catch (e) {
     toast.error(`订阅「${row.name}」更新失败`, e.response?.data?.detail || e.message)
@@ -159,8 +162,9 @@ async function onUpdateNow(row) {
 async function onUpdateAll() {
   updatingAll.value = true
   try {
-    await updateAllSubscriptions(useProxyUpdate.value)
-    toast.success(`全部订阅更新完成${useProxyUpdate.value ? '（代理）' : ''}`)
+    const proxy = customProxyUrl.value.trim()
+    await updateAllSubscriptions(useProxyUpdate.value, proxy)
+    toast.success(`全部订阅更新完成${useProxyUpdate.value || proxy ? '（代理）' : ''}`)
     await loadList()
   } catch (e) {
     toast.error('批量更新订阅失败', e.response?.data?.detail || e.message)
@@ -169,26 +173,30 @@ async function onUpdateAll() {
   }
 }
 
-// 切换启用状态（成功/失败都刷新列表，确保与后端一致）
+// 切换启用状态
 async function onToggleEnabled(row, newValue) {
+  togglingId.value = row.id
   try {
     await updateSubscription(row.id, { enabled: newValue })
     toast.success(newValue ? '已启用' : '已禁用')
   } catch (e) {
     toast.error('切换启用状态失败', e.response?.data?.detail || e.message)
   } finally {
+    togglingId.value = null
     await loadList()
   }
 }
 
-// 切换自动更新（成功/失败都刷新列表，确保与后端一致）
+// 切换自动更新
 async function onToggleAutoUpdate(row, newValue) {
+  togglingId.value = row.id
   try {
     await updateSubscription(row.id, { auto_update: newValue })
     toast.success(newValue ? '已开启自动更新' : '已关闭自动更新')
   } catch (e) {
     toast.error('切换自动更新失败', e.response?.data?.detail || e.message)
   } finally {
+    togglingId.value = null
     await loadList()
   }
 }
@@ -210,9 +218,14 @@ onMounted(() => {
             @update:checked="(v) => (useProxyUpdate = v)"
           />
           <Label for="use-proxy-update" class="cursor-pointer text-sm">
-            使用代理更新
+            走内核代理
           </Label>
         </div>
+        <Input
+          v-model="customProxyUrl"
+          placeholder="自定义代理 http://ip:port"
+          class="w-52 h-8 text-sm"
+        />
         <div class="flex gap-2">
           <Button variant="secondary" :disabled="loading" @click="loadList">
             <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
@@ -263,18 +276,32 @@ onMounted(() => {
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ row.node_count ?? 0 }}</TableCell>
                 <TableCell>
-                  <Switch
-                    :key="`au-${row.id}-${row.auto_update}`"
-                    :checked="!!row.auto_update"
-                    @update:checked="(v) => onToggleAutoUpdate(row, v)"
-                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    :disabled="togglingId === row.id"
+                    class="px-2"
+                    @click="onToggleAutoUpdate(row, !row.auto_update)"
+                  >
+                    <Loader2 v-if="togglingId === row.id" class="h-3.5 w-3.5 animate-spin" />
+                    <Badge v-else :variant="row.auto_update ? 'success' : 'secondary'" class="text-xs">
+                      {{ row.auto_update ? '开' : '关' }}
+                    </Badge>
+                  </Button>
                 </TableCell>
                 <TableCell>
-                  <Switch
-                    :key="`en-${row.id}-${row.enabled}`"
-                    :checked="!!row.enabled"
-                    @update:checked="(v) => onToggleEnabled(row, v)"
-                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    :disabled="togglingId === row.id"
+                    class="px-2"
+                    @click="onToggleEnabled(row, !row.enabled)"
+                  >
+                    <Loader2 v-if="togglingId === row.id" class="h-3.5 w-3.5 animate-spin" />
+                    <Badge v-else :variant="row.enabled ? 'success' : 'secondary'" class="text-xs">
+                      {{ row.enabled ? '开' : '关' }}
+                    </Badge>
+                  </Button>
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ formatDateTime(row.last_update) }}</TableCell>
                 <TableCell>

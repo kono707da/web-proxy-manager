@@ -52,7 +52,10 @@ def create_device(payload: DeviceCreate, db: Session = Depends(get_db), _=Depend
     db.add(dev)
     db.commit()
     db.refresh(dev)
-    get_manager().reload(db)
+    try:
+        get_manager().reload(db)
+    except Exception as e:
+        logger.warning("设备新增后 reload 失败（数据已保存）: %s", e)
     logger.info("新增设备: %s (ip=%s, node=%s)", dev.name, dev.source_ip, dev.proxy_name)
     return dev
 
@@ -74,7 +77,10 @@ def update_device(dev_id: int, payload: DeviceUpdate, db: Session = Depends(get_
         setattr(dev, k, v)
     db.commit()
     db.refresh(dev)
-    get_manager().reload(db)
+    try:
+        get_manager().reload(db)
+    except Exception as e:
+        logger.warning("设备更新后 reload 失败（数据已保存）: %s", e)
     logger.info("更新设备: %s (ip=%s, node=%s)", dev.name, dev.source_ip, dev.proxy_name)
     return dev
 
@@ -87,7 +93,10 @@ def delete_device(dev_id: int, db: Session = Depends(get_db), _=Depends(require_
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"设备不存在: id={dev_id}")
     db.delete(dev)
     db.commit()
-    get_manager().reload(db)
+    try:
+        get_manager().reload(db)
+    except Exception as e:
+        logger.warning("设备删除后 reload 失败（数据已保存）: %s", e)
     logger.info("删除设备: %s (ip=%s)", dev.name, dev.source_ip)
     return MessageResponse(message="设备已删除")
 
@@ -117,9 +126,6 @@ def discover_clients(db: Session = Depends(get_db), _=Depends(require_admin)) ->
         meta = c.get("metadata", {}) or {}
         src_ip = meta.get("sourceIP", "")
         if not src_ip or src_ip in assigned_ips:
-            continue
-        # 排除本机回环和内网网关
-        if src_ip.startswith("127.") or src_ip == "::1":
             continue
         ip_conns[src_ip] += 1
         host = meta.get("host") or meta.get("destinationIP") or ""
