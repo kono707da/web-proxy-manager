@@ -13,7 +13,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # 下载 mihomo 内核（可通过 build-arg 指定版本/架构/代理）
-ARG MIHOMO_VERSION=1.18.10
+ARG MIHOMO_VERSION=1.19.20
 ARG MIHOMO_ARCH=amd64
 ARG HTTP_PROXY=""
 ARG HTTPS_PROXY=""
