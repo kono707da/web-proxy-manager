@@ -4,24 +4,23 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 from jose import jwt
-from passlib.context import CryptContext
 
 from .config import settings
 
 logger = logging.getLogger("proxy_manager")
 
 ALGORITHM = settings.jwt_algorithm
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password[:72].encode("utf-8"))
+    return bcrypt.hashpw(password[:72].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     try:
-        return pwd_context.verify(plain[:72].encode("utf-8"), hashed)
+        return bcrypt.checkpw(plain[:72].encode("utf-8"), hashed.encode("utf-8"))
     except Exception as e:
         logger.error("密码校验异常: %s", e, exc_info=True)
         return False
