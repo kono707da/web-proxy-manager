@@ -26,9 +26,11 @@
 
 | 端口 | 用途 |
 |---|---|
-| 8000 | Web 管理界面（前后端合并） |
+| 9000 | Web 管理界面（宿主机映射端口，容器内仍监听 8000） |
 | 7890 | 代理混合端口（同时支持 HTTP / SOCKS5，客户端配置此端口即可） |
 | 9090 | mihomo external-controller（仅容器内部通信，**不要对外暴露**） |
+
+> 注：容器内部监听 8000 端口，通过 docker 端口映射 `9000:8000` 对外暴露为 9000，避免与同机其他服务冲突。如需改用其他宿主机端口，修改 docker-compose.yml 或 docker run 的 `-p` 参数即可。
 
 ## Docker 部署
 
@@ -63,7 +65,7 @@ IMAGE_TAG=10 docker compose up -d
 docker run -d \
   --name proxy-manager \
   --restart unless-stopped \
-  -p 8000:8000 \
+  -p 9000:8000 \
   -p 7890:7890 \
   -v proxy-manager-data:/app/backend/data \
   -e TZ=Asia/Shanghai \
@@ -72,7 +74,7 @@ docker run -d \
 
 ### 3. 访问
 
-- Web 界面：`http://<服务器IP>:8000`
+- Web 界面：`http://<服务器IP>:9000`
 - 默认管理员账号：`admin` / `admin123`（**首次登录后请立即在设置页修改密码**）
 - 客户端代理配置：HTTP 或 SOCKS5 指向 `<服务器IP>:7890`
 

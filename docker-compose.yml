@@ -4,7 +4,7 @@ services:
     container_name: proxy-manager
     restart: unless-stopped
     ports:
-      - "8000:8000"   # Web 管理界面
+      - "9000:8000"   # Web 管理界面（宿主机 9000 -> 容器 8000）
       - "7890:7890"   # 代理混合端口（同时支持 HTTP / SOCKS5）
     volumes:
       - proxy-manager-data:/app/backend/data
