@@ -1,40 +1,90 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from '@/components/ui/select'
+import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell
 } from '@/components/ui/table'
-import { Loader2, RefreshCw, Zap, Globe, Inbox } from 'lucide-vue-next'
-import { listProxies, selectProxy, testDelay } from '@/api/proxy'
+import { Loader2, RefreshCw, Zap, Globe, Inbox, Monitor, Check } from 'lucide-vue-next'
+import { listProxies, testDelay } from '@/api/proxy'
+import { listDevices, updateDevice } from '@/api/device'
+import { listSubscriptions } from '@/api/subscription'
 import { getStatus } from '@/api/system'
 
 const toast = useToast()
 
 const loading = ref(false)
 const proxies = ref([])
-const groups = ref([])
 const notRunning = ref(false)
 // 节点名 → 订阅名映射
 const nodeSource = ref({})
-// 节点延迟映射：{ [name]: delay }
+// 节点延迟映射
 const delayMap = reactive({})
-// 节点测速中状态：{ [name]: boolean }
+// 节点测速中状态
 const testingMap = reactive({})
 const batchTesting = ref(false)
 
-// 检查内核是否运行
+// 设备与订阅
+const devices = ref([])
+const subscriptions = ref([])
+const selectedDeviceId = ref('') // 字符串，给 Select 用
+const selectedSubId = ref('all') // 'all' 或订阅 id 字符串
+
+// 计算属性：当前选中设备对象
+const selectedDevice = computed(() =>
+  devices.value.find((d) => String(d.id) === selectedDeviceId.value) || null
+)
+
+// 过滤后的节点列表：按订阅筛选
+const filteredProxies = computed(() => {
+  if (selectedSubId.value === 'all') return proxies.value
+  const sub = subscriptions.value.find((s) => String(s.id) === selectedSubId.value)
+  if (!sub) return proxies.value
+  return proxies.value.filter((p) => nodeSource.value[p.name] === sub.name)
+})
+
+// 设备已分配的节点名
+const assignedNode = computed(() => selectedDevice.value?.proxy_name || '')
+
 async function loadStatus() {
   try {
     const s = await getStatus()
     notRunning.value = !s.running
     return !!s.running
-  } catch (e) {
+  } catch {
     notRunning.value = true
     return false
+  }
+}
+
+async function loadDevices() {
+  try {
+    const list = await listDevices()
+    devices.value = list.filter((d) => d.enabled)
+    // 默认选中第一个设备
+    if (!selectedDeviceId.value && devices.value.length > 0) {
+      selectedDeviceId.value = String(devices.value[0].id)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function loadSubscriptions() {
+  try {
+    subscriptions.value = await listSubscriptions()
+  } catch {
+    // ignore
   }
 }
 
@@ -45,9 +95,7 @@ async function loadProxies() {
   try {
     const data = await listProxies()
     proxies.value = data.proxies || []
-    groups.value = data.groups || []
     nodeSource.value = data.node_source || {}
-    // 初始化延迟映射：从 history 末尾取最近一次延迟
     proxies.value.forEach((p) => {
       const hist = p.history || []
       const last = hist.length ? hist[hist.length - 1] : null
@@ -60,14 +108,25 @@ async function loadProxies() {
   }
 }
 
-// 切换分组选中节点
-async function onSelect(group, name) {
+// 点击节点 → 为选中设备分配该节点
+async function onAssignNode(nodeName) {
+  if (!selectedDevice.value) {
+    toast.warning('请先选择设备', '在节点列表上方选择要配置的设备')
+    return
+  }
+  const dev = selectedDevice.value
+  // 如果已经分配了同一个节点，不重复操作
+  if (dev.proxy_name === nodeName) {
+    toast.info('该设备已使用此节点', `${dev.name} → ${nodeName}`)
+    return
+  }
   try {
-    await selectProxy(group, name)
-    toast.success('节点已切换', `${group} → ${name}`)
-    await loadProxies()
+    await updateDevice(dev.id, { proxy_name: nodeName })
+    // 更新本地设备列表
+    dev.proxy_name = nodeName
+    toast.success('节点已分配', `${dev.name} → ${nodeName}`)
   } catch (e) {
-    toast.error('切换节点失败', e.response?.data?.detail || e.message)
+    toast.error('分配节点失败', e.response?.data?.detail || e.message)
   }
 }
 
@@ -88,21 +147,20 @@ async function onTestDelay(name) {
   }
 }
 
-// 批量测速所有节点
+// 批量测速
 async function onBatchTest() {
   if (batchTesting.value) return
   batchTesting.value = true
   try {
-    await Promise.all(proxies.value.map((p) => onTestDelay(p.name)))
+    await Promise.all(filteredProxies.value.map((p) => onTestDelay(p.name)))
     toast.success('批量测速完成')
-  } catch (e) {
-    toast.error('批量测速失败', e.message)
+  } catch {
+    // ignore
   } finally {
     batchTesting.value = false
   }
 }
 
-// 延迟颜色：绿 <200 / 黄 <500 / 红 >=500 / 灰 =0超时
 function delayColor(delay) {
   if (!delay || delay === 0) return 'text-muted-foreground'
   if (delay < 200) return 'text-emerald-400'
@@ -116,6 +174,8 @@ function delayText(delay) {
 }
 
 onMounted(() => {
+  loadDevices()
+  loadSubscriptions()
   loadProxies()
 })
 </script>
@@ -146,72 +206,107 @@ onMounted(() => {
     </Alert>
 
     <template v-else>
-      <!-- 分组区域 -->
-      <div class="space-y-4">
-        <Card v-for="group in groups" :key="group.name">
-          <CardHeader class="pb-3">
-            <div class="flex items-center gap-2 flex-wrap">
-              <Globe class="h-4 w-4 text-primary" />
-              <CardTitle class="text-base">{{ group.name }}</CardTitle>
-              <Badge variant="secondary">{{ group.type }}</Badge>
-              <Badge v-if="group.now" variant="default">当前: {{ group.now }}</Badge>
+      <!-- 设备 + 订阅筛选栏 -->
+      <Card>
+        <CardContent class="pt-4">
+          <div class="flex flex-wrap items-end gap-4">
+            <!-- 设备选择 -->
+            <div class="flex flex-col gap-1.5 min-w-[200px]">
+              <label class="text-sm font-medium text-foreground flex items-center gap-1">
+                <Monitor class="h-3.5 w-3.5" />
+                选择设备
+              </label>
+              <Select v-model="selectedDeviceId">
+                <SelectTrigger class="w-[220px]">
+                  <SelectValue placeholder="选择要配置的设备" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="d in devices"
+                    :key="d.id"
+                    :value="String(d.id)"
+                  >
+                    {{ d.name }} ({{ d.source_ip }})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div class="flex flex-wrap gap-2">
-              <div
-                v-for="name in group.all"
-                :key="name"
-                class="flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-sm transition-colors cursor-pointer"
-                :class="name === group.now
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'"
-                @click="onSelect(group.name, name)"
-              >
-                <span>{{ name }}</span>
-                <button
-                  type="button"
-                  class="ml-1 rounded p-0.5 text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
-                  :disabled="testingMap[name]"
-                  @click.stop="onTestDelay(name)"
-                >
-                  <Loader2 v-if="testingMap[name]" class="h-3.5 w-3.5 animate-spin" />
-                  <Zap v-else class="h-3.5 w-3.5" />
-                </button>
-                <span
-                  v-if="delayMap[name] !== undefined"
-                  class="text-xs font-medium"
-                  :class="delayColor(delayMap[name])"
-                >
-                  {{ delayText(delayMap[name]) }}
-                </span>
-              </div>
+
+            <!-- 订阅筛选 -->
+            <div class="flex flex-col gap-1.5 min-w-[200px]">
+              <label class="text-sm font-medium text-foreground flex items-center gap-1">
+                <Globe class="h-3.5 w-3.5" />
+                筛选订阅
+              </label>
+              <Select v-model="selectedSubId">
+                <SelectTrigger class="w-[220px]">
+                  <SelectValue placeholder="全部订阅" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部订阅</SelectItem>
+                  <SelectItem
+                    v-for="s in subscriptions"
+                    :key="s.id"
+                    :value="String(s.id)"
+                  >
+                    {{ s.name }} ({{ s.node_count }})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+
+            <!-- 当前分配信息 -->
+            <div v-if="selectedDevice" class="flex items-center gap-2 ml-auto">
+              <span class="text-sm text-muted-foreground">当前节点：</span>
+              <Badge v-if="assignedNode" variant="success">{{ assignedNode }}</Badge>
+              <Badge v-else variant="secondary">未分配</Badge>
+            </div>
+          </div>
+          <p v-if="selectedDevice" class="mt-2 text-xs text-muted-foreground">
+            点击下方节点即为设备「{{ selectedDevice.name }}」分配该节点，立即生效
+          </p>
+          <p v-else class="mt-2 text-xs text-muted-foreground">
+            请先在上方选择设备，然后点击节点为其分配代理
+          </p>
+        </CardContent>
+      </Card>
 
       <!-- 节点列表表格 -->
       <Card>
         <CardHeader>
-          <CardTitle>全部节点</CardTitle>
+          <CardTitle class="text-base">
+            节点列表
+            <Badge variant="secondary" class="ml-2">{{ filteredProxies.length }} 个</Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div class="relative rounded-md border border-border">
             <Table>
               <TableHeader>
                 <TableRow class="hover:bg-transparent">
+                  <TableHead class="w-8"></TableHead>
                   <TableHead>名称</TableHead>
                   <TableHead class="w-28">来源订阅</TableHead>
                   <TableHead class="w-24">类型</TableHead>
-                  <TableHead class="w-24">UDP</TableHead>
                   <TableHead class="w-24">状态</TableHead>
                   <TableHead class="w-28 text-right">最近延迟</TableHead>
+                  <TableHead class="w-16 text-right">测速</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow v-for="p in proxies" :key="p.name">
-                  <TableCell class="font-medium">
+                <TableRow
+                  v-for="p in filteredProxies"
+                  :key="p.name"
+                  class="cursor-pointer transition-colors"
+                  :class="assignedNode === p.name
+                    ? 'bg-primary/10 hover:bg-primary/15'
+                    : 'hover:bg-accent'"
+                  @click="onAssignNode(p.name)"
+                >
+                  <TableCell>
+                    <Check v-if="assignedNode === p.name" class="h-4 w-4 text-primary" />
+                  </TableCell>
+                  <TableCell class="font-medium" :class="assignedNode === p.name ? 'text-primary' : ''">
                     {{ p.name }}
                   </TableCell>
                   <TableCell>
@@ -220,11 +315,6 @@ onMounted(() => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{{ p.type }}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="p.udp ? 'success' : 'secondary'">
-                      {{ p.udp ? '支持' : '不支持' }}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge :variant="p.alive ? 'success' : 'secondary'">
@@ -236,9 +326,20 @@ onMounted(() => {
                       {{ delayText(delayMap[p.name]) }}
                     </span>
                   </TableCell>
+                  <TableCell class="text-right">
+                    <button
+                      type="button"
+                      class="rounded p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                      :disabled="testingMap[p.name]"
+                      @click.stop="onTestDelay(p.name)"
+                    >
+                      <Loader2 v-if="testingMap[p.name]" class="h-3.5 w-3.5 animate-spin" />
+                      <Zap v-else class="h-3.5 w-3.5" />
+                    </button>
+                  </TableCell>
                 </TableRow>
-                <TableRow v-if="proxies.length === 0 && !loading" class="hover:bg-transparent">
-                  <TableCell colspan="6">
+                <TableRow v-if="filteredProxies.length === 0 && !loading" class="hover:bg-transparent">
+                  <TableCell colspan="7">
                     <div class="flex flex-col items-center justify-center py-10 text-muted-foreground">
                       <Inbox class="h-10 w-10 mb-2 opacity-50" />
                       <span class="text-sm">暂无节点</span>

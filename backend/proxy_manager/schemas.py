@@ -234,7 +234,7 @@ class QuotaOut(BaseModel):
 class DeviceCreate(BaseModel):
     name: str
     source_ip: str
-    proxy_name: str
+    proxy_name: str = ""
     enabled: bool = True
 
 

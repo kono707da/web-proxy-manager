@@ -211,7 +211,8 @@ def _build_rules(db: Session) -> list[str]:
         .all()
     )
     for d in devices:
-        rules.append(f"SRC-IP-CIDR,{d.source_ip}/32,{d.proxy_name}")
+        if d.proxy_name:
+            rules.append(f"SRC-IP-CIDR,{d.source_ip}/32,{d.proxy_name}")
     # 最终兜底
     rules.append(DEFAULT_RULES[-1])  # MATCH,DIRECT
     return rules

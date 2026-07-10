@@ -104,7 +104,7 @@ class Device(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     source_ip: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
-    proxy_name: Mapped[str] = mapped_column(String(256), nullable=False)  # 分配的节点名
+    proxy_name: Mapped[str] = mapped_column(String(256), nullable=False, default="")  # 分配的节点名，空表示未分配
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, nullable=False)
