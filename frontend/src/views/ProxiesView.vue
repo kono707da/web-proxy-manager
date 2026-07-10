@@ -144,12 +144,21 @@ async function onTestDelay(name) {
   }
 }
 
-// 批量测速
+// 批量测速（限制并发为 5，避免 mihomo 同时收到过多请求导致排队超时）
 async function onBatchTest() {
   if (batchTesting.value) return
   batchTesting.value = true
+  const nodes = filteredProxies.value.map((p) => p.name)
+  const CONCURRENCY = 5
+  let index = 0
+  async function worker() {
+    while (index < nodes.length) {
+      const i = index++
+      await onTestDelay(nodes[i])
+    }
+  }
   try {
-    await Promise.all(filteredProxies.value.map((p) => onTestDelay(p.name)))
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, nodes.length) }, () => worker()))
     toast.success('批量测速完成')
   } catch {
     // ignore

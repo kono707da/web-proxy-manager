@@ -15,7 +15,7 @@ class MihomoAPIError(Exception):
 class MihomoClient:
     """mihomo external-controller RESTful API 客户端。"""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 9090, secret: str = "", timeout: float = 10.0) -> None:
+    def __init__(self, host: str = "127.0.0.1", port: int = 9090, secret: str = "", timeout: float = 20.0) -> None:
         self.base_url = f"http://{host}:{port}"
         self.secret = secret
         self.timeout = timeout
@@ -77,13 +77,21 @@ class MihomoClient:
         """在 Selector 类型的代理组中选择节点。"""
         self._request("PUT", f"/proxies/{group}", json={"name": name})
 
-    def test_delay(self, name: str, url: str = "https://www.gstatic.com/generate_204", timeout: int = 5000) -> int:
-        """测速，返回延迟毫秒，0 表示失败。"""
+    def test_delay(self, name: str, url: str = "https://www.gstatic.com/generate_204", timeout: int = 15000) -> int:
+        """测速，返回延迟毫秒，0 表示失败。
+
+        timeout 为传给 mihomo 的测速超时（毫秒），需大于客户端 HTTP 超秒以等待排队。
+        503/504（排队超时/测速超时）静默返回 0，不刷错误日志。
+        """
         try:
             data = self._request("GET", f"/proxies/{name}/delay", params={"url": url, "timeout": timeout})
             return int(data.get("delay", 0))
         except MihomoAPIError as e:
-            logger.warning("测速失败 %s: %s", name, e)
+            # 503 = mihomo 内部测速异常，504 = 节点超时，都属正常失败，降级为 debug
+            if "返回 503" in str(e) or "返回 504" in str(e):
+                logger.debug("节点测速超时 %s: %s", name, e)
+            else:
+                logger.warning("测速失败 %s: %s", name, e)
             return 0
 
     # ---------- 规则 ----------
