@@ -52,6 +52,7 @@ const dialogVisible = ref(false)
 const editing = ref(null)
 const updatingId = ref(null) // 当前正在立即更新的订阅 id
 const updatingAll = ref(false) // 是否正在批量更新
+const useProxyUpdate = ref(false) // 更新时是否通过当前选中节点代理
 
 const form = reactive({
   name: '',
@@ -144,8 +145,8 @@ async function onDelete(row) {
 async function onUpdateNow(row) {
   updatingId.value = row.id
   try {
-    await updateSubscriptionNow(row.id)
-    toast.success(`订阅「${row.name}」更新成功`)
+    await updateSubscriptionNow(row.id, useProxyUpdate.value)
+    toast.success(`订阅「${row.name}」更新成功${useProxyUpdate.value ? '（代理）' : ''}`)
     await loadList()
   } catch (e) {
     toast.error(`订阅「${row.name}」更新失败`, e.response?.data?.detail || e.message)
@@ -158,8 +159,8 @@ async function onUpdateNow(row) {
 async function onUpdateAll() {
   updatingAll.value = true
   try {
-    await updateAllSubscriptions()
-    toast.success('全部订阅更新完成')
+    await updateAllSubscriptions(useProxyUpdate.value)
+    toast.success(`全部订阅更新完成${useProxyUpdate.value ? '（代理）' : ''}`)
     await loadList()
   } catch (e) {
     toast.error('批量更新订阅失败', e.response?.data?.detail || e.message)
@@ -203,21 +204,33 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-bold tracking-tight">订阅管理</h2>
-      <div class="flex gap-2">
-        <Button variant="secondary" :disabled="loading" @click="loadList">
-          <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
-          <RefreshCw v-else class="h-4 w-4" />
-          刷新
-        </Button>
-        <Button variant="secondary" :disabled="updatingAll" @click="onUpdateAll">
-          <Loader2 v-if="updatingAll" class="h-4 w-4 animate-spin" />
-          <RotateCw v-else class="h-4 w-4" />
-          更新全部
-        </Button>
-        <Button @click="openCreate">
-          <Plus class="h-4 w-4" />
-          新增订阅
-        </Button>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 rounded-md border border-border px-3 py-1.5">
+          <Switch
+            id="use-proxy-update"
+            :checked="useProxyUpdate"
+            @update:checked="(v) => (useProxyUpdate = v)"
+          />
+          <Label for="use-proxy-update" class="cursor-pointer text-sm">
+            使用代理更新
+          </Label>
+        </div>
+        <div class="flex gap-2">
+          <Button variant="secondary" :disabled="loading" @click="loadList">
+            <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
+            <RefreshCw v-else class="h-4 w-4" />
+            刷新
+          </Button>
+          <Button variant="secondary" :disabled="updatingAll" @click="onUpdateAll">
+            <Loader2 v-if="updatingAll" class="h-4 w-4 animate-spin" />
+            <RotateCw v-else class="h-4 w-4" />
+            更新全部
+          </Button>
+          <Button @click="openCreate">
+            <Plus class="h-4 w-4" />
+            新增订阅
+          </Button>
+        </div>
       </div>
     </div>
 

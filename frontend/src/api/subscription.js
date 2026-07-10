@@ -20,12 +20,18 @@ export async function deleteSubscription(id) {
   return resp.data
 }
 
-export async function updateSubscriptionNow(id) {
-  const resp = await client.post(`/api/subscriptions/${id}/update`, {}, { timeout: 60000 })
+export async function updateSubscriptionNow(id, useProxy = false) {
+  const resp = await client.post(`/api/subscriptions/${id}/update`, {}, {
+    params: { use_proxy: useProxy },
+    timeout: 60000
+  })
   return resp.data
 }
 
-export async function updateAllSubscriptions() {
-  const resp = await client.post('/api/subscriptions/update-all', {}, { timeout: 120000 })
+export async function updateAllSubscriptions(useProxy = false) {
+  const resp = await client.post('/api/subscriptions/update-all', {}, {
+    params: { use_proxy: useProxy },
+    timeout: 120000
+  })
   return resp.data
 }
