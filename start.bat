@@ -37,7 +37,7 @@ if not exist "%~dp0frontend\dist\index.html" (
 
 REM 将项目自带的 mihomo 二进制目录加入 PATH（本地开发用，backend\bin\mihomo.exe）
 if exist "%~dp0backend\bin\mihomo.exe" (
-    set PATH=%~dp0backend\bin;%PATH%
+    set PATH=%~dp0backend\bin;!PATH!
 )
 
 REM 检查 mihomo
