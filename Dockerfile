@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget gzip ca-ce
     gzip -d /tmp/mihomo.gz && \
     chmod +x /tmp/mihomo && \
     mv /tmp/mihomo /usr/local/bin/mihomo && \
-    apt-get purge -y wget gzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+    apt-get purge -y --auto-remove wget && rm -rf /var/lib/apt/lists/*
 
 ENV http_proxy="" https_proxy=""
 
