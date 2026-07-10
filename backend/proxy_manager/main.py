@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("proxy_manager")
 
-BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # 项目根（backend/ 的上一级）
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 
 
