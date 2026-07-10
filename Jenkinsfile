@@ -35,7 +35,7 @@ pipeline {
             steps {
                 sshPublisher(publishers: [
                     sshPublisherDesc(
-                        configName: 'hongkong',
+                        configName: 'jenkins',
                         verbose: true,
                         transfers: [
                             sshTransfer(
@@ -50,7 +50,7 @@ pipeline {
 
     post {
         success {
-            echo '部署成功！访问 http://38.92.9.207:9000'
+            echo '部署成功！访问 http://192.168.188.18:9000'
         }
         failure {
             echo '部署失败，请检查 Jenkins 日志'
