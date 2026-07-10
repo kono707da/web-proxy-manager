@@ -27,20 +27,6 @@ DEFAULT_RULES: list[str] = [
 ]
 
 
-def _is_fake_node(p: dict[str, Any]) -> bool:
-    """识别订阅商投放的公告/通知类假节点。
-
-    特征：server 为 1.1.1.1（Cloudflare DNS，非真实节点服务器），通常伴随特定端口
-    和中文公告名称。这些节点无法连接，仅用于在客户端展示文字信息。
-    """
-    server = str(p.get("server", "")).strip()
-    if server != "1.1.1.1":
-        return False
-    name = str(p.get("name", ""))
-    keywords = ["无法连接", "过期", "更新订阅", "变动日期", "专用节点和", "重启软件", "更新没节点"]
-    return any(kw in name for kw in keywords)
-
-
 def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False) -> list[dict[str, Any]]:
     """拉取订阅链接，解析为 proxies 列表。
 
@@ -63,16 +49,11 @@ def fetch_subscription(url: str, timeout: float = 30.0, use_proxy: bool = False)
         text = resp.text
         data = yaml.safe_load(text)
         if isinstance(data, dict) and isinstance(data.get("proxies"), list):
-            raw = [p for p in data["proxies"] if isinstance(p, dict) and p.get("name")]
-        elif isinstance(data, list):
-            raw = [p for p in data if isinstance(p, dict) and p.get("name")]
-        else:
-            logger.warning("订阅 %s 格式无法识别，未解析到 proxies", url)
-            return []
-        fake_count = sum(1 for p in raw if _is_fake_node(p))
-        if fake_count > 0:
-            logger.info("订阅 %s 过滤 %d 个公告类假节点", url, fake_count)
-        return [p for p in raw if not _is_fake_node(p)]
+            return [p for p in data["proxies"] if isinstance(p, dict) and p.get("name")]
+        if isinstance(data, list):
+            return [p for p in data if isinstance(p, dict) and p.get("name")]
+        logger.warning("订阅 %s 格式无法识别，未解析到 proxies", url)
+        return []
     except Exception as e:
         logger.error("拉取订阅 %s 失败: %s", url, e, exc_info=True)
         raise
