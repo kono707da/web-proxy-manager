@@ -11,12 +11,14 @@ const props = defineProps({
   class: { type: null, default: undefined }
 })
 
+// reka-ui SwitchRoot 使用 modelValue，不是 checked
+// 对外暴露 checked / update:checked 接口，内部桥接到 modelValue
 const checked = defineModel('checked')
 </script>
 
 <template>
   <SwitchRoot
-    v-model:checked="checked"
+    v-model="checked"
     :default-checked="defaultChecked"
     :disabled="disabled"
     :required="required"

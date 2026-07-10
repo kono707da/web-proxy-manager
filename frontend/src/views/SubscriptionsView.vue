@@ -52,7 +52,6 @@ const dialogVisible = ref(false)
 const editing = ref(null)
 const updatingId = ref(null) // 当前正在立即更新的订阅 id
 const updatingAll = ref(false) // 是否正在批量更新
-const togglingId = ref(null) // 当前正在切换开关的订阅 id
 const useProxyUpdate = ref(false) // 更新时是否通过当前选中节点代理
 const customProxyUrl = ref('') // 自定义代理 URL（用于订阅更新）
 
@@ -175,28 +174,24 @@ async function onUpdateAll() {
 
 // 切换启用状态
 async function onToggleEnabled(row, newValue) {
-  togglingId.value = row.id
   try {
     await updateSubscription(row.id, { enabled: newValue })
     toast.success(newValue ? '已启用' : '已禁用')
   } catch (e) {
     toast.error('切换启用状态失败', e.response?.data?.detail || e.message)
   } finally {
-    togglingId.value = null
     await loadList()
   }
 }
 
 // 切换自动更新
 async function onToggleAutoUpdate(row, newValue) {
-  togglingId.value = row.id
   try {
     await updateSubscription(row.id, { auto_update: newValue })
     toast.success(newValue ? '已开启自动更新' : '已关闭自动更新')
   } catch (e) {
     toast.error('切换自动更新失败', e.response?.data?.detail || e.message)
   } finally {
-    togglingId.value = null
     await loadList()
   }
 }
@@ -276,32 +271,18 @@ onMounted(() => {
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ row.node_count ?? 0 }}</TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    :disabled="togglingId === row.id"
-                    class="px-2"
-                    @click="onToggleAutoUpdate(row, !row.auto_update)"
-                  >
-                    <Loader2 v-if="togglingId === row.id" class="h-3.5 w-3.5 animate-spin" />
-                    <Badge v-else :variant="row.auto_update ? 'success' : 'secondary'" class="text-xs">
-                      {{ row.auto_update ? '开' : '关' }}
-                    </Badge>
-                  </Button>
+                  <Switch
+                    :key="`au-${row.id}-${row.auto_update}`"
+                    :checked="!!row.auto_update"
+                    @update:checked="(v) => onToggleAutoUpdate(row, v)"
+                  />
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    :disabled="togglingId === row.id"
-                    class="px-2"
-                    @click="onToggleEnabled(row, !row.enabled)"
-                  >
-                    <Loader2 v-if="togglingId === row.id" class="h-3.5 w-3.5 animate-spin" />
-                    <Badge v-else :variant="row.enabled ? 'success' : 'secondary'" class="text-xs">
-                      {{ row.enabled ? '开' : '关' }}
-                    </Badge>
-                  </Button>
+                  <Switch
+                    :key="`en-${row.id}-${row.enabled}`"
+                    :checked="!!row.enabled"
+                    @update:checked="(v) => onToggleEnabled(row, v)"
+                  />
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ formatDateTime(row.last_update) }}</TableCell>
                 <TableCell>
