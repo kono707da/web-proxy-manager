@@ -11,6 +11,7 @@ const routes = [
   { path: '/connections', name: 'connections', component: () => import('../views/ConnectionsView.vue'), meta: { requiresAuth: true } },
   { path: '/limits', name: 'limits', component: () => import('../views/LimitsView.vue'), meta: { requiresAuth: true } },
   { path: '/quotas', name: 'quotas', component: () => import('../views/QuotasView.vue'), meta: { requiresAuth: true } },
+  { path: '/logs', name: 'logs', component: () => import('../views/LogsView.vue'), meta: { requiresAuth: true } },
   { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' }
 ]

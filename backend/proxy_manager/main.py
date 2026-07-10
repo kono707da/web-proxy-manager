@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .database import init_db
+from .log_handler import install_memory_handler
 from .mihomo.manager import get_manager
 from .routers import ALL_ROUTERS
 
@@ -19,6 +20,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+# 安装内存日志 handler，供 /api/logs 读取
+install_memory_handler(level=logging.INFO)
 logger = logging.getLogger("proxy_manager")
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # 项目根（backend/ 的上一级）

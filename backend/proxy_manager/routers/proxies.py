@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
+from ..mihomo import config_builder
 from ..mihomo.client import MihomoAPIError
 from ..mihomo.manager import get_manager
 from ..schemas import DelayTestResponse, MessageResponse, ProxyGroupOut, ProxyOut, SelectProxyRequest
@@ -26,12 +27,14 @@ def _ensure_running() -> None:
 
 @router.get("")
 def list_proxies(db: Session = Depends(get_db)) -> dict:
-    """列出全部代理节点与分组。"""
+    """列出全部代理节点与分组，附带节点来源订阅名映射。"""
     _ensure_running()
     try:
         data = get_manager().client.get_proxies()
     except MihomoAPIError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"获取代理列表失败: {e}")
+    # 节点名 → 订阅名映射
+    node_source = config_builder.get_node_source_map(db)
     raw = data.get("proxies", {}) or {}
     proxies: list[ProxyOut] = []
     groups: list[ProxyGroupOut] = []
@@ -54,7 +57,13 @@ def list_proxies(db: Session = Depends(get_db)) -> dict:
                 history=info.get("history", []) or [],
                 alive=info.get("alive", False),
             ))
-    return {"proxies": proxies, "groups": groups}
+    return {"proxies": proxies, "groups": groups, "node_source": node_source}
+
+
+@router.get("/node-source")
+def get_node_source(db: Session = Depends(get_db)) -> dict:
+    """返回节点名 → 订阅名映射（不需要 mihomo 运行）。"""
+    return config_builder.get_node_source_map(db)
 
 
 @router.get("/groups", response_model=list[ProxyGroupOut])

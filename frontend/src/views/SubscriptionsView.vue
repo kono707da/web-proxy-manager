@@ -169,29 +169,27 @@ async function onUpdateAll() {
   }
 }
 
-// 切换启用状态（失败回滚）
+// 切换启用状态（成功/失败都刷新列表，确保与后端一致）
 async function onToggleEnabled(row, newValue) {
-  const old = !!row.enabled
-  row.enabled = newValue
   try {
     await updateSubscription(row.id, { enabled: newValue })
     toast.success(newValue ? '已启用' : '已禁用')
   } catch (e) {
-    row.enabled = old
     toast.error('切换启用状态失败', e.response?.data?.detail || e.message)
+  } finally {
+    await loadList()
   }
 }
 
-// 切换自动更新（失败回滚）
+// 切换自动更新（成功/失败都刷新列表，确保与后端一致）
 async function onToggleAutoUpdate(row, newValue) {
-  const old = !!row.auto_update
-  row.auto_update = newValue
   try {
     await updateSubscription(row.id, { auto_update: newValue })
     toast.success(newValue ? '已开启自动更新' : '已关闭自动更新')
   } catch (e) {
-    row.auto_update = old
     toast.error('切换自动更新失败', e.response?.data?.detail || e.message)
+  } finally {
+    await loadList()
   }
 }
 
@@ -254,19 +252,26 @@ onMounted(() => {
             <TableBody>
               <TableRow v-for="(row, i) in list" :key="row.id">
                 <TableCell class="text-muted-foreground">{{ i + 1 }}</TableCell>
-                <TableCell class="font-medium text-foreground">{{ row.name }}</TableCell>
+                <TableCell class="font-medium text-foreground">
+                  <div class="flex items-center gap-2">
+                    {{ row.name }}
+                    <Badge v-if="row.enabled" variant="success">生效中</Badge>
+                  </div>
+                </TableCell>
                 <TableCell class="text-muted-foreground">
                   <span class="block max-w-[260px] truncate" :title="row.url">{{ row.url || '—' }}</span>
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ row.node_count ?? 0 }}</TableCell>
                 <TableCell>
                   <Switch
+                    :key="`au-${row.id}-${row.auto_update}`"
                     :checked="!!row.auto_update"
                     @update:checked="(v) => onToggleAutoUpdate(row, v)"
                   />
                 </TableCell>
                 <TableCell>
                   <Switch
+                    :key="`en-${row.id}-${row.enabled}`"
                     :checked="!!row.enabled"
                     @update:checked="(v) => onToggleEnabled(row, v)"
                   />

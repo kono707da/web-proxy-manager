@@ -97,6 +97,24 @@ def _collect_proxies(db: Session) -> list[dict[str, Any]]:
     return proxies
 
 
+def get_node_source_map(db: Session) -> dict[str, str]:
+    """返回节点名 → 订阅名映射（用于前端展示节点来源）。
+
+    节点按订阅顺序首次出现时记录来源，与 _collect_proxies 去重逻辑一致。
+    """
+    subs = db.query(Subscription).filter(Subscription.enabled.is_(True)).all()
+    seen: set[str] = set()
+    source: dict[str, str] = {}
+    for sub in subs:
+        nodes = load_subscription_cache(sub.id)
+        for p in nodes:
+            name = p.get("name")
+            if name and name not in seen:
+                seen.add(name)
+                source[name] = sub.name
+    return source
+
+
 def _apply_speed_limits(proxies: list[dict[str, Any]], db: Session) -> None:
     """将限速规则应用到 proxies。
 
