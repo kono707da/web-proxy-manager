@@ -199,18 +199,6 @@ async function onUpdateAllWithProxy() {
   }
 }
 
-// 切换启用状态
-async function onToggleEnabled(row, newValue) {
-  try {
-    await updateSubscription(row.id, { enabled: newValue })
-    toast.success(newValue ? '已启用' : '已禁用')
-  } catch (e) {
-    toast.error('切换启用状态失败', e.response?.data?.detail || e.message)
-  } finally {
-    await loadList()
-  }
-}
-
 // 切换自动更新
 async function onToggleAutoUpdate(row, newValue) {
   try {
@@ -266,7 +254,6 @@ onMounted(() => {
                 <TableHead class="min-w-[200px]">URL</TableHead>
                 <TableHead class="w-20">节点数</TableHead>
                 <TableHead class="w-24">自动更新</TableHead>
-                <TableHead class="w-20">启用</TableHead>
                 <TableHead class="min-w-[160px]">最后更新</TableHead>
                 <TableHead class="w-20">状态</TableHead>
                 <TableHead class="w-64 text-right">操作</TableHead>
@@ -276,10 +263,7 @@ onMounted(() => {
               <TableRow v-for="(row, i) in list" :key="row.id">
                 <TableCell class="text-muted-foreground">{{ i + 1 }}</TableCell>
                 <TableCell class="font-medium text-foreground">
-                  <div class="flex items-center gap-2">
-                    {{ row.name }}
-                    <Badge v-if="row.enabled" variant="success">生效中</Badge>
-                  </div>
+                  {{ row.name }}
                 </TableCell>
                 <TableCell class="text-muted-foreground">
                   <span class="block max-w-[260px] truncate" :title="row.url">{{ row.url || '—' }}</span>
@@ -290,13 +274,6 @@ onMounted(() => {
                     :key="`au-${row.id}-${row.auto_update}`"
                     :checked="!!row.auto_update"
                     @update:checked="(v) => onToggleAutoUpdate(row, v)"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    :key="`en-${row.id}-${row.enabled}`"
-                    :checked="!!row.enabled"
-                    @update:checked="(v) => onToggleEnabled(row, v)"
                   />
                 </TableCell>
                 <TableCell class="text-muted-foreground">{{ formatDateTime(row.last_update) }}</TableCell>
@@ -343,7 +320,7 @@ onMounted(() => {
                 </TableCell>
               </TableRow>
               <TableRow v-if="list.length === 0 && !loading" class="hover:bg-transparent">
-                <TableCell colspan="9">
+                <TableCell colspan="8">
                   <div class="flex flex-col items-center justify-center py-10 text-muted-foreground">
                     <Inbox class="h-10 w-10 mb-2 opacity-50" />
                     <span class="text-sm">暂无订阅</span>
@@ -392,13 +369,6 @@ onMounted(() => {
               <span class="text-xs text-muted-foreground">按设定间隔自动拉取订阅</span>
             </div>
             <Switch id="sub-auto" v-model:checked="form.auto_update" />
-          </div>
-          <div class="flex items-center justify-between rounded-md border border-border p-3">
-            <div class="flex flex-col gap-0.5">
-              <Label for="sub-enabled" class="cursor-pointer">启用</Label>
-              <span class="text-xs text-muted-foreground">关闭后该订阅不会被加载</span>
-            </div>
-            <Switch id="sub-enabled" v-model:checked="form.enabled" />
           </div>
         </div>
 
