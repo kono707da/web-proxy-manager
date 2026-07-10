@@ -145,7 +145,9 @@ class MihomoManager:
         else:
             config_builder.write_config(db, self._config_path)
 
-        binary = settings.mihomo.binary
+        # 确保二进制可用：PATH 查找 → work_dir 缓存 → 下载到挂载卷
+        self._ensure_binary()
+        binary = self._binary_path or settings.mihomo.binary
         cmd = [binary, "-d", str(self._work_dir), "-f", str(self._config_path)]
         logger.info("启动 mihomo: %s", " ".join(cmd))
         try:
