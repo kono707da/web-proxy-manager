@@ -46,6 +46,7 @@ class MihomoManager:
         self._memory_cache: dict[str, int] = {"inuse": 0, "oslimit": 0}
         self._start_time: float = 0.0
         self._last_error: str | None = None
+        self._binary_path: str | None = None
         # 连接字节缓存，用于计算增量累计流量: {conn_id: {up, down, ip}}
         self._conn_cache: dict[str, dict[str, Any]] = {}
 
@@ -62,6 +63,70 @@ class MihomoManager:
         if self._proc is None:
             return False
         return self._proc.poll() is None
+
+    # ---------- 二进制管理 ----------
+    def _ensure_binary(self) -> None:
+        """确保 mihomo 二进制可用；PATH/work_dir 找不到则下载到 work_dir（持久化到挂载卷）。"""
+        import shutil
+        import platform
+
+        binary = settings.mihomo.binary
+        # 1. PATH 命中（本地开发 backend/bin 或镜像内置）
+        found = shutil.which(binary)
+        if found:
+            self._binary_path = found
+            return
+        # 2. work_dir 已缓存（容器首次下载后持久化在挂载卷）
+        is_windows = platform.system() == "Windows"
+        local_bin = self._work_dir / ("mihomo.exe" if is_windows else "mihomo")
+        if local_bin.exists():
+            self._binary_path = str(local_bin)
+            logger.info("使用已缓存的 mihomo: %s", local_bin)
+            return
+        # 3. 下载
+        self._download_mihomo(local_bin, is_windows)
+        self._binary_path = str(local_bin)
+
+    def _download_mihomo(self, target: Path, is_windows: bool) -> None:
+        """从 GitHub Releases 下载 mihomo 到 target。"""
+        import gzip
+        import platform
+        import stat
+
+        version = settings.mihomo.binary_version
+        arch_map = {"x86_64": "amd64", "AMD64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+        mihomo_arch = arch_map.get(platform.machine(), "amd64")
+
+        if is_windows:
+            url = (
+                f"https://github.com/MetaCubeX/mihomo/releases/download/v{version}"
+                f"/mihomo-windows-{mihomo_arch}-compatible-v{version}.zip"
+            )
+            raise RuntimeError(
+                f"Windows 环境请手动下载 mihomo ({url}) 解压后"
+                f"将 mihomo.exe 放到 {target} 或 backend/bin/，或加入 PATH。"
+            )
+
+        url = (
+            f"https://github.com/MetaCubeX/mihomo/releases/download/v{version}"
+            f"/mihomo-linux-{mihomo_arch}-v{version}.gz"
+        )
+        logger.info("下载 mihomo v%s (%s): %s", version, mihomo_arch, url)
+        self._work_dir.mkdir(parents=True, exist_ok=True)
+        tmp_gz = self._work_dir / "mihomo.gz"
+        try:
+            # httpx 默认 trust_env，会读取 HTTP_PROXY/HTTPS_PROXY 环境变量
+            with httpx.stream("GET", url, follow_redirects=True, timeout=120.0) as resp:
+                resp.raise_for_status()
+                with tmp_gz.open("wb") as f:
+                    for chunk in resp.iter_bytes():
+                        f.write(chunk)
+            with gzip.open(tmp_gz, "rb") as gz, target.open("wb") as out:
+                out.write(gz.read())
+            target.chmod(target.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+            logger.info("mihomo 下载完成: %s", target)
+        finally:
+            tmp_gz.unlink(missing_ok=True)
 
     def start(self, db: Session | None = None) -> None:
         """生成配置并启动 mihomo。"""

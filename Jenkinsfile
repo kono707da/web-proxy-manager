@@ -19,8 +19,8 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                // 通过 192.168.188.1:7897 代理下载 mihomo 内核（Jenkins 无法直连 GitHub）
-                sh "docker build --build-arg HTTP_PROXY=http://192.168.188.1:7897 --build-arg HTTPS_PROXY=http://192.168.188.1:7897 -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
+                // mihomo 内核改由后端运行时下载到挂载卷，构建阶段无需访问 GitHub
+                sh "docker build -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
             }
         }
 

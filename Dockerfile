@@ -12,23 +12,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# 下载 mihomo 内核（可通过 build-arg 指定版本/架构/代理）
-ARG MIHOMO_VERSION=1.19.20
-ARG MIHOMO_ARCH=amd64
-ARG HTTP_PROXY=""
-ARG HTTPS_PROXY=""
-ENV http_proxy=${HTTP_PROXY} https_proxy=${HTTPS_PROXY}
-
-RUN apt-get update && apt-get install -y --no-install-recommends wget gzip ca-certificates && \
-    wget -q --tries=3 --timeout=30 \
-      "https://github.com/MetaCubeX/mihomo/releases/download/v${MIHOMO_VERSION}/mihomo-linux-${MIHOMO_ARCH}-v${MIHOMO_VERSION}.gz" \
-      -O /tmp/mihomo.gz && \
-    gzip -d /tmp/mihomo.gz && \
-    chmod +x /tmp/mihomo && \
-    mv /tmp/mihomo /usr/local/bin/mihomo && \
-    apt-get purge -y --auto-remove wget && rm -rf /var/lib/apt/lists/*
-
-ENV http_proxy="" https_proxy=""
+# mihomo 内核由后端运行时自动下载到 /app/backend/data/mihomo/（挂载卷内，持久化）
+# 构建阶段无需访问 GitHub，加快构建速度
 
 # 安装 Python 依赖
 COPY backend/requirements.txt /app/backend/requirements.txt
