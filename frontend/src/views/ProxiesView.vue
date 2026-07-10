@@ -12,10 +12,7 @@ import {
   SelectContent,
   SelectItem
 } from '@/components/ui/select'
-import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell
-} from '@/components/ui/table'
-import { Loader2, RefreshCw, Zap, Globe, Inbox, Monitor, Check } from 'lucide-vue-next'
+import { Loader2, RefreshCw, Zap, Globe, Inbox, Monitor, Check, Wifi, WifiOff } from 'lucide-vue-next'
 import { listProxies, testDelay } from '@/api/proxy'
 import { listDevices, updateDevice } from '@/api/device'
 import { listSubscriptions } from '@/api/subscription'
@@ -271,92 +268,86 @@ onMounted(() => {
         </CardContent>
       </Card>
 
-      <!-- 节点列表表格 -->
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-base">
-            节点列表
-            <Badge variant="secondary" class="ml-2">{{ filteredProxies.length }} 个</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="relative rounded-md border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow class="hover:bg-transparent">
-                  <TableHead class="w-8"></TableHead>
-                  <TableHead>名称</TableHead>
-                  <TableHead class="w-28">来源订阅</TableHead>
-                  <TableHead class="w-24">类型</TableHead>
-                  <TableHead class="w-24">状态</TableHead>
-                  <TableHead class="w-28 text-right">最近延迟</TableHead>
-                  <TableHead class="w-16 text-right">测速</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow
-                  v-for="p in filteredProxies"
-                  :key="p.name"
-                  class="cursor-pointer transition-colors"
-                  :class="assignedNode === p.name
-                    ? 'bg-primary/10 hover:bg-primary/15'
-                    : 'hover:bg-accent'"
-                  @click="onAssignNode(p.name)"
+      <!-- 节点列表卡片 -->
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <h3 class="text-base font-semibold">节点列表</h3>
+          <Badge variant="secondary">{{ filteredProxies.length }} 个</Badge>
+        </div>
+        <div v-if="loading" class="flex items-center justify-center py-12">
+          <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <div v-else-if="filteredProxies.length === 0" class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <Inbox class="h-10 w-10 mb-2 opacity-50" />
+          <span class="text-sm">暂无节点</span>
+        </div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div
+            v-for="p in filteredProxies"
+            :key="p.name"
+            class="group relative cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md"
+            :class="assignedNode === p.name
+              ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+              : 'border-border hover:border-primary/50'"
+            @click="onAssignNode(p.name)"
+          >
+            <!-- 选中标记 -->
+            <div class="absolute -right-1.5 -top-1.5">
+              <div
+                v-if="assignedNode === p.name"
+                class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow"
+              >
+                <Check class="h-3 w-3" />
+              </div>
+            </div>
+
+            <!-- 卡片内容 -->
+            <div class="space-y-2">
+              <!-- 节点名称 -->
+              <div class="flex items-center gap-1.5">
+                <component
+                  :is="p.alive ? Wifi : WifiOff"
+                  class="h-3.5 w-3.5 shrink-0"
+                  :class="p.alive ? 'text-emerald-400' : 'text-muted-foreground'"
+                />
+                <span
+                  class="text-sm font-medium truncate flex-1"
+                  :class="assignedNode === p.name ? 'text-primary' : 'text-foreground'"
+                  :title="p.name"
                 >
-                  <TableCell>
-                    <Check v-if="assignedNode === p.name" class="h-4 w-4 text-primary" />
-                  </TableCell>
-                  <TableCell class="font-medium" :class="assignedNode === p.name ? 'text-primary' : ''">
-                    {{ p.name }}
-                  </TableCell>
-                  <TableCell>
-                    <Badge v-if="nodeSource[p.name]" variant="secondary">{{ nodeSource[p.name] }}</Badge>
-                    <span v-else class="text-muted-foreground text-xs">—</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{{ p.type }}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge :variant="p.alive ? 'success' : 'secondary'">
-                      {{ p.alive ? '可用' : '不可用' }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell class="text-right">
-                    <span class="font-medium" :class="delayColor(delayMap[p.name])">
-                      {{ delayText(delayMap[p.name]) }}
-                    </span>
-                  </TableCell>
-                  <TableCell class="text-right">
-                    <button
-                      type="button"
-                      class="rounded p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
-                      :disabled="testingMap[p.name]"
-                      @click.stop="onTestDelay(p.name)"
-                    >
-                      <Loader2 v-if="testingMap[p.name]" class="h-3.5 w-3.5 animate-spin" />
-                      <Zap v-else class="h-3.5 w-3.5" />
-                    </button>
-                  </TableCell>
-                </TableRow>
-                <TableRow v-if="filteredProxies.length === 0 && !loading" class="hover:bg-transparent">
-                  <TableCell colspan="7">
-                    <div class="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                      <Inbox class="h-10 w-10 mb-2 opacity-50" />
-                      <span class="text-sm">暂无节点</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-            <div
-              v-if="loading"
-              class="absolute inset-0 flex items-center justify-center rounded-md bg-background/60 backdrop-blur-sm"
-            >
-              <Loader2 class="h-5 w-5 animate-spin text-primary" />
+                  {{ p.name }}
+                </span>
+              </div>
+
+              <!-- 订阅来源 -->
+              <div class="flex items-center gap-1.5">
+                <Globe class="h-3 w-3 text-muted-foreground shrink-0" />
+                <span v-if="nodeSource[p.name]" class="text-xs text-muted-foreground truncate">{{ nodeSource[p.name] }}</span>
+                <span v-else class="text-xs text-muted-foreground">未知来源</span>
+              </div>
+
+              <!-- 底部信息：类型 + 延迟 -->
+              <div class="flex items-center justify-between pt-1 border-t border-border/50">
+                <Badge variant="outline" class="text-[10px] h-5">{{ p.type }}</Badge>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    class="rounded p-0.5 text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                    :disabled="testingMap[p.name]"
+                    @click.stop="onTestDelay(p.name)"
+                  >
+                    <Loader2 v-if="testingMap[p.name]" class="h-3.5 w-3.5 animate-spin" />
+                    <Zap v-else class="h-3.5 w-3.5" />
+                  </button>
+                  <span class="text-xs font-medium" :class="delayColor(delayMap[p.name])">
+                    {{ delayText(delayMap[p.name]) }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </template>
   </div>
 </template>
