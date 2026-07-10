@@ -127,15 +127,12 @@ async function onAssignNode(nodeName) {
   }
 }
 
-// 测速单个节点
+// 测速单个节点（超时静默处理，仅更新延迟显示）
 async function onTestDelay(name) {
   testingMap[name] = true
   try {
     const data = await testDelay(name)
     delayMap[name] = data.delay ?? 0
-    if (data.delay === 0) {
-      toast.warning('测速超时', `节点「${name}」无响应`)
-    }
   } catch (e) {
     delayMap[name] = 0
     toast.error('测速失败', `节点「${name}」: ${e.response?.data?.detail || e.message}`)
