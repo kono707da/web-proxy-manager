@@ -21,6 +21,7 @@ class MihomoConfig(BaseModel):
     """mihomo 内核配置。"""
 
     binary: str = "mihomo"
+    binary_version: str = "1.19.28"
     work_dir: str = "data/mihomo"
     api_port: int = 9090
     mixed_port: int = 7890

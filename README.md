@@ -40,14 +40,8 @@
 ### 1. 构建镜像
 
 ```bash
-# 默认构建（amd64）
+# 构建镜像（mihomo 内核由容器启动时自动下载到挂载卷，构建阶段无需访问 GitHub）
 docker build -t proxy-manager .
-
-# 指定架构（如 arm64）
-docker build --build-arg MIHOMO_ARCH=arm64 -t proxy-manager .
-
-# 网络不稳定时通过代理下载 mihomo 内核
-docker build --build-arg HTTP_PROXY=http://192.168.188.1:7897 -t proxy-manager .
 ```
 
 ### 2. 启动容器

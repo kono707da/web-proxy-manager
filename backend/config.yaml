@@ -4,8 +4,10 @@ jwt_expire_minutes: 1440
 
 # mihomo 内核配置
 mihomo:
-  # mihomo 二进制路径（容器内 /usr/local/bin/mihomo；本地开发请自行下载并配置 PATH 或填写绝对路径）
+  # mihomo 二进制路径（PATH 命中则用；否则后端运行时自动下载到 work_dir，持久化到挂载卷）
   binary: "mihomo"
+  # 运行时自动下载时使用的 mihomo 版本
+  binary_version: "1.19.28"
   # mihomo 工作目录（存放 config.yaml、订阅缓存等）
   work_dir: "data/mihomo"
   # 外部控制端口（仅容器内部通信，用于后端调用 mihomo API）
