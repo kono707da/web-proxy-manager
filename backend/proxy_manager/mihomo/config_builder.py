@@ -23,7 +23,7 @@ DEFAULT_RULES: list[str] = [
     "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
     "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
     "GEOIP,CN,DIRECT",
-    "MATCH,PROXY",
+    "MATCH,DIRECT",
 ]
 
 
@@ -216,7 +216,7 @@ def _build_rules(db: Session) -> list[str]:
     for d in devices:
         rules.append(f"SRC-IP-CIDR,{d.source_ip}/32,{d.proxy_name}")
     # 最终兜底
-    rules.append(DEFAULT_RULES[-1])  # MATCH,PROXY
+    rules.append(DEFAULT_RULES[-1])  # MATCH,DIRECT
     return rules
 
 
