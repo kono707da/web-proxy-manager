@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from .. import __version__
+from ..database import get_db
 from ..deps import require_admin
+from ..mihomo import config_builder
 from ..mihomo.client import MihomoAPIError
 from ..mihomo.manager import get_manager
 from ..schemas import LogLevelUpdateRequest, MessageResponse, MihomoStatusResponse, ModeUpdateRequest, SystemInfoResponse
@@ -119,3 +123,30 @@ def update_log_level(payload: LogLevelUpdateRequest, _=Depends(require_admin)) -
     except MihomoAPIError as e:
         logger.error("切换日志级别失败: %s", e, exc_info=True)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"切换日志级别失败: {e}")
+
+
+@router.get("/debug/mihomo-config")
+def debug_mihomo_config(_=Depends(require_admin)) -> dict:
+    """调试：返回 mihomo 实际使用的 config.yaml 内容。"""
+    mgr = get_manager()
+    path: Path = mgr.config_path
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"配置文件不存在: {path}")
+    try:
+        text = path.read_text(encoding="utf-8")
+        return {"path": str(path), "content": text}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"读取失败: {e}")
+
+
+@router.get("/debug/subscription-cache/{sub_id}")
+def debug_subscription_cache(sub_id: int, _=Depends(require_admin)) -> dict:
+    """调试：返回指定订阅的缓存 yaml 内容。"""
+    path = config_builder.SUB_CACHE_DIR / f"{sub_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"缓存文件不存在: {path}")
+    try:
+        text = path.read_text(encoding="utf-8")
+        return {"sub_id": sub_id, "path": str(path), "content": text}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"读取失败: {e}")
