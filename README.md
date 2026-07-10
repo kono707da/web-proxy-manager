@@ -94,7 +94,7 @@ start.bat
 启动脚本会：
 1. 检查 8000 端口占用情况：本应用占用则自动杀掉重启；其他程序占用则提示用户。
 2. 检查前端是否已构建（`frontend/dist` 存在），不存在则自动 `npm run build`。
-3. 检查 mihomo 二进制是否可用。
+3. 检查 mihomo 二进制是否可用（若存在 `backend/bin/mihomo.exe` 会自动加入 PATH）。
 4. 启动后端（uvicorn），同时服务前端静态文件。
 
 ### 前端热更新开发

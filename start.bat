@@ -35,6 +35,11 @@ if not exist "%~dp0frontend\dist\index.html" (
     popd
 )
 
+REM 将项目自带的 mihomo 二进制目录加入 PATH（本地开发用，backend\bin\mihomo.exe）
+if exist "%~dp0backend\bin\mihomo.exe" (
+    set PATH=%~dp0backend\bin;%PATH%
+)
+
 REM 检查 mihomo
 where mihomo >nul 2>&1
 if %ERRORLEVEL% neq 0 (
