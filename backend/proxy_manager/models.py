@@ -96,6 +96,21 @@ class TrafficQuota(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now, nullable=False)
 
 
+class Device(Base):
+    """设备管理：按来源 IP 分配固定代理节点。"""
+
+    __tablename__ = "devices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_ip: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    proxy_name: Mapped[str] = mapped_column(String(256), nullable=False)  # 分配的节点名
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now, nullable=False)
+
+
 class TrafficStat(Base):
     """按客户端 IP 累计的流量统计。"""
 

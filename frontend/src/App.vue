@@ -9,7 +9,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   LayoutDashboard, Globe, Rss, Route, Network,
   Gauge, Database, Settings, LogOut, ShieldCheck,
-  ScrollText, Activity, Zap
+  ScrollText, Activity, Zap, MonitorSmartphone
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -24,6 +24,7 @@ const navItems = [
   { path: '/proxies', label: '代理节点', icon: Globe },
   { path: '/subscriptions', label: '订阅管理', icon: Rss },
   { path: '/rules', label: '规则路由', icon: Route },
+  { path: '/devices', label: '设备管理', icon: MonitorSmartphone },
   { path: '/connections', label: '连接管理', icon: Network },
   { path: '/limits', label: '限速控制', icon: Gauge },
   { path: '/quotas', label: '流量配额', icon: Database },

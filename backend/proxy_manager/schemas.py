@@ -230,6 +230,40 @@ class QuotaOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ---------- 设备管理 ----------
+class DeviceCreate(BaseModel):
+    name: str
+    source_ip: str
+    proxy_name: str
+    enabled: bool = True
+
+
+class DeviceUpdate(BaseModel):
+    name: Optional[str] = None
+    source_ip: Optional[str] = None
+    proxy_name: Optional[str] = None
+    enabled: Optional[bool] = None
+
+
+class DeviceOut(BaseModel):
+    id: int
+    name: str
+    source_ip: str
+    proxy_name: str
+    enabled: bool
+    last_seen: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class DiscoveredClient(BaseModel):
+    """自动发现的未分配客户端。"""
+    source_ip: str
+    host: str = ""
+    connections: int = 0
+
+
 # ---------- 系统 ----------
 class MihomoStatusResponse(BaseModel):
     running: bool

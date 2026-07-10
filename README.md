@@ -11,8 +11,9 @@
   - 限速：支持 global / group / client 三种粒度，通过 mihomo 的 `download-speed-limit` / `upload-speed-limit` 实现。
   - 配额：按客户端 IP 累计流量，超限自动生成 `IP-CIDR,x.x.x.x/32,REJECT` 阻断规则并热重载配置。
 - **代理状态可视化**：顶部实时状态条显示内核运行/停止、代理模式、当前生效节点；订阅页已启用标记；节点页高亮当前节点并显示来源订阅。
+- **设备管理**：按来源 IP 为每台设备分配固定代理节点，所有设备共用 7890 端口，无需认证。支持自动发现未分配客户端。
 - **系统日志**：应用日志 + mihomo 日志双 Tab 查看，支持级别过滤、关键词搜索、自动刷新。
-- **Web 管理界面**：黑金主题 SPA，10 个功能页面，登录态持久化，前后端合并到单端口 8000。
+- **Web 管理界面**：黑金主题 SPA，11 个功能页面，登录态持久化，前后端合并到单端口 8000。
 
 ## 技术栈
 
@@ -149,10 +150,10 @@ proxy-manager/
 │   │   │   ├── client.py      # RESTful API 客户端
 │   │   │   ├── config_builder.py  # 配置生成（订阅解析、限速、配额阻断规则）
 │   │   │   └── manager.py     # 进程管理 + 流量监控 + 配额检查循环
-│   │   ├── routers/           # 10 个 API 路由模块
+│   │   ├── routers/           # 11 个 API 路由模块
 │   │   ├── config.py          # 三层配置加载
 │   │   ├── database.py        # SQLAlchemy 初始化
-│   │   ├── models.py          # 6 个数据表
+│   │   ├── models.py          # 7 个数据表
 │   │   ├── schemas.py         # Pydantic 模型
 │   │   ├── security.py        # 密码哈希 + JWT
 │   │   ├── deps.py            # 认证依赖
@@ -163,8 +164,8 @@ proxy-manager/
 │   └── run.py
 ├── frontend/
 │   └── src/
-│       ├── api/               # 10 个 API 调用模块
-│       ├── views/             # 10 个页面
+│       ├── api/               # 11 个 API 调用模块
+│       ├── views/             # 11 个页面
 │       ├── stores/            # Pinia stores（auth + system）
 │       ├── components/ui/     # shadcn-vue 组件库
 │       └── router/            # 路由 + 登录守卫
@@ -189,6 +190,7 @@ proxy-manager/
 | 流量 | `/api/traffic` | 实时流量 / 内存 / 历史统计（可重置） |
 | 限速 | `/api/limits` | CRUD（global / group / client） |
 | 配额 | `/api/quotas` | CRUD / 重置使用量 |
+| 设备 | `/api/devices` | CRUD / 自动发现客户端（按来源 IP 分配固定节点） |
 | 日志 | `/api/logs` | 应用日志 / mihomo 日志（支持级别过滤、关键词搜索） |
 
 ## 致谢

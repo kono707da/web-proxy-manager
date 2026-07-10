@@ -1,6 +1,6 @@
 """API 路由聚合。"""
 
-from . import auth, connections, limits, logs, proxies, quotas, rules, subscriptions, system, traffic
+from . import auth, connections, devices, limits, logs, proxies, quotas, rules, subscriptions, system, traffic
 
 ALL_ROUTERS = [
     auth.router,
@@ -12,5 +12,6 @@ ALL_ROUTERS = [
     traffic.router,
     limits.router,
     quotas.router,
+    devices.router,
     logs.router,
 ]

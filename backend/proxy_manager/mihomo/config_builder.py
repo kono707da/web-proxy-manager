@@ -9,7 +9,7 @@ import yaml
 from sqlalchemy.orm import Session
 
 from ..config import BASE_DIR, settings
-from ..models import Rule, SpeedLimit, Subscription, TrafficQuota
+from ..models import Device, Rule, SpeedLimit, Subscription, TrafficQuota
 
 logger = logging.getLogger("proxy_manager.mihomo")
 
@@ -179,7 +179,7 @@ def _build_proxy_groups(proxy_names: list[str]) -> list[dict[str, Any]]:
 
 
 def _build_rules(db: Session) -> list[str]:
-    """配额阻断规则 + 自定义规则(按 priority 降序) + 默认兜底规则。"""
+    """配额阻断规则 + 自定义规则(按 priority 降序) + 默认兜底规则 + 设备路由规则。"""
     rules: list[str] = []
     # 配额超限的客户端 IP 阻断（最高优先级）
     blocked = (
@@ -201,7 +201,19 @@ def _build_rules(db: Session) -> list[str]:
     )
     for r in custom:
         rules.append(f"{r.rule_type},{r.value},{r.target}")
-    rules.extend(DEFAULT_RULES)
+    # 默认兜底规则（除 MATCH 外）
+    rules.extend(DEFAULT_RULES[:-1])
+    # 设备路由规则：按来源 IP 分配固定节点（在 MATCH 之前，国内直连之后）
+    devices = (
+        db.query(Device)
+        .filter(Device.enabled.is_(True))
+        .order_by(Device.id.asc())
+        .all()
+    )
+    for d in devices:
+        rules.append(f"SRC-IP-CIDR,{d.source_ip}/32,{d.proxy_name}")
+    # 最终兜底
+    rules.append(DEFAULT_RULES[-1])  # MATCH,PROXY
     return rules
 
 

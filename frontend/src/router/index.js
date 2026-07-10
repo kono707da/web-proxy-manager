@@ -8,6 +8,7 @@ const routes = [
   { path: '/proxies', name: 'proxies', component: () => import('../views/ProxiesView.vue'), meta: { requiresAuth: true } },
   { path: '/subscriptions', name: 'subscriptions', component: () => import('../views/SubscriptionsView.vue'), meta: { requiresAuth: true } },
   { path: '/rules', name: 'rules', component: () => import('../views/RulesView.vue'), meta: { requiresAuth: true } },
+  { path: '/devices', name: 'devices', component: () => import('../views/DevicesView.vue'), meta: { requiresAuth: true } },
   { path: '/connections', name: 'connections', component: () => import('../views/ConnectionsView.vue'), meta: { requiresAuth: true } },
   { path: '/limits', name: 'limits', component: () => import('../views/LimitsView.vue'), meta: { requiresAuth: true } },
   { path: '/quotas', name: 'quotas', component: () => import('../views/QuotasView.vue'), meta: { requiresAuth: true } },
