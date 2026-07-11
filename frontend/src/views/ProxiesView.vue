@@ -96,7 +96,7 @@ async function loadProxies() {
     proxies.value.forEach((p) => {
       const hist = p.history || []
       const last = hist.length ? hist[hist.length - 1] : null
-      delayMap[p.name] = last ? (last.delay ?? 0) : 0
+      delayMap[p.name] = last ? (last.delay ?? 0) : null
     })
   } catch (e) {
     toast.error('获取代理节点失败', e.response?.data?.detail || e.message)
@@ -165,14 +165,16 @@ async function onBatchTest() {
 }
 
 function delayColor(delay) {
-  if (!delay || delay === 0) return 'text-muted-foreground'
+  if (delay === null || delay === undefined) return 'text-muted-foreground/60'
+  if (delay === 0) return 'text-red-400'
   if (delay < 200) return 'text-emerald-400'
   if (delay < 500) return 'text-yellow-400'
   return 'text-red-400'
 }
 
 function delayText(delay) {
-  if (!delay || delay === 0) return '超时'
+  if (delay === null || delay === undefined) return '未测'
+  if (delay === 0) return '超时'
   return `${delay} ms`
 }
 
