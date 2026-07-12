@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = '0'
         IMAGE_NAME    = 'proxy-manager'
         CONTAINER     = 'proxy-manager'
         REGISTRY      = credentials('docker-registry-url')
@@ -21,7 +20,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 // mihomo 内核改由后端运行时下载到挂载卷，构建阶段无需访问 GitHub
-                sh "docker build -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
+                sh "DOCKER_BUILDKIT=0 docker build -t ${IMAGE_NAME} -t ${IMAGE_TAG} -t ${IMAGE_LATEST} ."
             }
         }
 
