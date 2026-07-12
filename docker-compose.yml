@@ -1,6 +1,6 @@
 services:
   proxy-manager:
-    image: 192.168.188.18:5000/proxy-manager:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-registry}/proxy-manager:${IMAGE_TAG:-latest}
     container_name: proxy-manager
     restart: unless-stopped
     ports:

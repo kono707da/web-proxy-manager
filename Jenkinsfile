@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY      = '192.168.188.18:5000'
         IMAGE_NAME    = 'proxy-manager'
         CONTAINER     = 'proxy-manager'
+        REGISTRY      = credentials('docker-registry-url')
         IMAGE_TAG     = "${REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}"
         IMAGE_LATEST  = "${REGISTRY}/${IMAGE_NAME}:latest"
     }
@@ -50,7 +50,7 @@ pipeline {
 
     post {
         success {
-            echo '部署成功！访问 http://38.92.9.207:9000'
+            echo '部署成功！访问部署服务器 9000 端口'
         }
         failure {
             echo '部署失败，请检查 Jenkins 日志'
