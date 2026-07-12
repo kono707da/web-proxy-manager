@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        DOCKER_BUILDKIT = '0'
         IMAGE_NAME    = 'proxy-manager'
         CONTAINER     = 'proxy-manager'
         REGISTRY      = credentials('docker-registry-url')
